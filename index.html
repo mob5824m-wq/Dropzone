@@ -223,8 +223,10 @@
   // ---------- audio ----------
   let audioCtx;
   function ensureAudio(){
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    try{
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }catch(e){ /* audio not available; game still works silently */ }
   }
   function playTone(freq, type, duration, vol){
     if (!audioCtx) return;
@@ -344,6 +346,7 @@
     if (state !== 'MENU' && state !== 'GAMEOVER') return;
     ensureAudio();
     mouse.down = false;
+    $('cursor-tip').style.display = 'none';
     players.length = 0; bots.length = 0; builds.length = 0; loot.length = 0;
     particles.length = 0; floats.length = 0; tracers.length = 0; killFeedItems = [];
     killFeed.innerHTML = '';
