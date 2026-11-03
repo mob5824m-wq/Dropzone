@@ -343,6 +343,7 @@
   function gameStart(){
     if (state !== 'MENU' && state !== 'GAMEOVER') return;
     ensureAudio();
+    mouse.down = false;
     players.length = 0; bots.length = 0; builds.length = 0; loot.length = 0;
     particles.length = 0; floats.length = 0; tracers.length = 0; killFeedItems = [];
     killFeed.innerHTML = '';
@@ -659,7 +660,7 @@
     // map clamp
     b.x = clamp(b.x, 40, MAP - 40); b.y = clamp(b.y, 40, MAP - 40);
   }
-  function shootBot(b){ const tmp = b.lastShot; shoot(b); b.lastShot = tmp || Date.now(); }
+  function shootBot(b){ shoot(b); }
   function meleeBot(b){ melee(b); }
 
   // ---------- storm ----------
@@ -851,11 +852,11 @@
 
     // map border
     ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 2;
-    ctx.strokeRect(-cam.x + W/2 - MAP/2, -cam.y + H/2 - MAP/2, MAP, MAP);
+    ctx.strokeRect(-MAP/2, -MAP/2, MAP, MAP);
 
     // trees
     for (let t of trees){
-      const sx = t.x - cam.x, sy = t.y - cam.y;
+      const sx = t.x, sy = t.y;
       if (sx < -120 || sx > W + 120 || sy < -120 || sy > H + 120) continue;
       ctx.fillStyle = '#5d8a3d';
       ctx.beginPath(); ctx.arc(sx, sy, t.r, 0, Math.PI*2); ctx.fill();
@@ -866,7 +867,7 @@
     }
     // rocks
     for (let r of rocks){
-      const sx = r.x - cam.x, sy = r.y - cam.y;
+      const sx = r.x, sy = r.y;
       if (sx < -100 || sx > W + 100 || sy < -100 || sy > H + 100) continue;
       ctx.fillStyle = '#8a94a6';
       ctx.beginPath(); ctx.arc(sx, sy, r.r, 0, Math.PI*2); ctx.fill();
@@ -881,7 +882,7 @@
     for (let b of builds) if (b.type !== 'floor') drawOneBuild(b);
     function drawOneBuild(b){
       const r = rectBuild(b);
-      const sx = b.x - cam.x, sy = b.y - cam.y;
+      const sx = b.x, sy = b.y;
       if (sx + r.w < -60 || sx > W + 60 || sy + r.h < -60 || sy > H + 60) return;
       ctx.save();
       ctx.translate(sx, sy);
@@ -923,7 +924,7 @@
     const have = p.mats[p.buildPiece === 'wall' ? 'wood' : (p.buildPiece === 'floor' ? 'brick' : 'metal')];
     const canAfford = have >= cost;
     const r = rectBuild({ x: target.x, y: target.y, type: p.buildPiece, rot: p.buildRot });
-    const sx = target.x - cam.x, sy = target.y - cam.y;
+    const sx = target.x, sy = target.y;
     ctx.save();
     ctx.translate(sx, sy);
     ctx.globalAlpha = (ok && canAfford) ? 0.55 : 0.35;
@@ -936,14 +937,14 @@
     ctx.save();
     ctx.strokeStyle = (ok && canAfford) ? 'rgba(52,211,153,0.45)' : 'rgba(255,95,95,0.45)';
     ctx.lineWidth = 2; ctx.setLineDash([12, 8]);
-    ctx.beginPath(); ctx.moveTo(p.x - cam.x, p.y - cam.y);
-    ctx.lineTo(target.x - cam.x, target.y - cam.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    ctx.lineTo(target.x, target.y); ctx.stroke();
     ctx.setLineDash([]); ctx.restore();
   }
 
   function drawPlayer(ent){
     if (ent.dead) return;
-    const sx = ent.x - cam.x, sy = ent.y - cam.y;
+    const sx = ent.x, sy = ent.y;
     if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) return;
     ctx.save();
     ctx.translate(sx, sy);
@@ -974,7 +975,7 @@
 
   function drawLoot(){
     for (let l of loot){
-      const sx = l.x - cam.x, sy = l.y - cam.y;
+      const sx = l.x, sy = l.y;
       const pulse = 1 + Math.sin(frame * 0.12) * 0.12;
       ctx.save();
       ctx.translate(sx, sy);
@@ -992,8 +993,8 @@
       ctx.save();
       ctx.globalAlpha = Math.max(0, t.life);
       ctx.strokeStyle = t.color; ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.moveTo(t.x1 - cam.x, t.y1 - cam.y); ctx.lineTo(t.x2 - cam.x, t.y2 - cam.y); ctx.stroke();
-      ctx.fillStyle = t.color; ctx.beginPath(); ctx.arc(t.x2 - cam.x, t.y2 - cam.y, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+      ctx.fillStyle = t.color; ctx.beginPath(); ctx.arc(t.x2, t.y2, 2.5, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
   }
@@ -1004,7 +1005,7 @@
       ctx.save();
       ctx.globalAlpha = a;
       ctx.fillStyle = pr.color;
-      ctx.beginPath(); ctx.arc(pr.x - cam.x, pr.y - cam.y, pr.size * a, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.size * a, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
   }
@@ -1017,14 +1018,14 @@
       ctx.fillStyle = fl.color;
       ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(fl.text, fl.x - cam.x, fl.y - cam.y);
+      ctx.fillText(fl.text, fl.x, fl.y);
       ctx.restore();
     }
   }
 
   function drawStorm(){
     // safe zone circle in world
-    const sx = storm.cx - cam.x, sy = storm.cy - cam.y;
+    const sx = storm.cx, sy = storm.cy;
     ctx.save();
     ctx.beginPath();
     ctx.arc(sx, sy, storm.radius, 0, Math.PI * 2);
