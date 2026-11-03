@@ -142,7 +142,7 @@
 <div id="start-screen" class="overlay">
   <h1>DROPZONE</h1>
   <div class="tag">Local Battle Royale</div>
-  <p>Build walls, ramps and floors. Outlast the shrinking storm. Eliminate all bots for Victory Royale.</p>
+  <p>Build walls, ramps and floors. Outlast the shrinking storm. The bots fight each other too —<br>let them soften each other up, then eliminate the survivors for Victory Royale.</p>
   <div class="controls-hint">
     <kbd>W A S D</kbd> Move &nbsp; <kbd>SHIFT</kbd> Sprint &nbsp; <kbd>MOUSE</kbd> Aim &nbsp; <kbd>CLICK</kbd> Shoot<br>
     <kbd>1 2 3</kbd> Weapons &nbsp; <kbd>4</kbd> Build Mode &nbsp; <kbd>F</kbd> Place Build &nbsp; <kbd>R</kbd> Reload / Rotate<br>
@@ -257,17 +257,19 @@
     o.connect(g); g.connect(audioCtx.destination);
     o.start(t); o.stop(t + duration);
   }
-  function sfx(kind){
+  function sfx(kind, gain){
+    gain = gain == null ? 1 : gain;
+    if (gain <= 0) return;
     ensureAudio();
-    if (kind === 'shootRifle')  { playTone(700, 'square', 0.05, 0.12); playTone(1400, 'square', 0.03, 0.06); }
-    else if (kind === 'shootShotgun'){ playTone(160, 'sawtooth', 0.12, 0.14); playTone(260, 'sawtooth', 0.08, 0.08); }
-    else if (kind === 'pickaxe'){ playTone(120, 'square', 0.1, 0.1); }
-    else if (kind === 'hit')    { playTone(700, 'square', 0.08, 0.1); }
-    else if (kind === 'hitBuild'){ playTone(400, 'square', 0.06, 0.08); }
-    else if (kind === 'build')  { playTone(1100, 'sine', 0.06, 0.07); }
-    else if (kind === 'reload') { playTone(400, 'square', 0.06, 0.09); playTone(700, 'square', 0.06, 0.07); }
-    else if (kind === 'kill')   { playTone(900, 'sine', 0.15, 0.12); playTone(1350, 'sine', 0.15, 0.1); }
-    else if (kind === 'storm')  { playTone(140, 'sawtooth', 0.3, 0.06); }
+    if (kind === 'shootRifle')  { playTone(700, 'square', 0.05, 0.12 * gain); playTone(1400, 'square', 0.03, 0.06 * gain); }
+    else if (kind === 'shootShotgun'){ playTone(160, 'sawtooth', 0.12, 0.14 * gain); playTone(260, 'sawtooth', 0.08, 0.08 * gain); }
+    else if (kind === 'pickaxe'){ playTone(120, 'square', 0.1, 0.1 * gain); }
+    else if (kind === 'hit')    { playTone(700, 'square', 0.08, 0.1 * gain); }
+    else if (kind === 'hitBuild'){ playTone(400, 'square', 0.06, 0.08 * gain); }
+    else if (kind === 'build')  { playTone(1100, 'sine', 0.06, 0.07 * gain); }
+    else if (kind === 'reload') { playTone(400, 'square', 0.06, 0.09 * gain); playTone(700, 'square', 0.06, 0.07 * gain); }
+    else if (kind === 'kill')   { playTone(900, 'sine', 0.15, 0.12 * gain); playTone(1350, 'sine', 0.15, 0.1 * gain); }
+    else if (kind === 'storm')  { playTone(140, 'sawtooth', 0.3, 0.06 * gain); }
   }
 
   function showError(msg){
@@ -343,7 +345,8 @@
       buildMode: false, buildPiece: 'wall', buildRot: 0,
       mats: { wood: 500, brick: 300, metal: 100 },
       dead: false, isBot, name, color, hitFlash: 0, elims: 0,
-      ai: { state: 'wander', timer: 0, wx: x, wy: y, lastShot: 0, target: null }
+      ai: { state: 'wander', timer: 0, wx: x, wy: y, lastShot: 0, target: null,
+            retargetAt: 0, seenSince: 0, aimErr: 0, nextAim: 0, nextStrafe: 0, strafe: 1 }
     };
   }
 
@@ -640,6 +643,12 @@
   function damageEnt(target, amount, attacker, weaponName){
     if (target.dead) return;
     if (attacker && attacker.isBot) amount *= BOT_DAMAGE_SCALE;
+    // a bot that gets shot turns on whoever shot it
+    if (target.isBot && attacker && attacker !== target && target.ai && target.ai.target !== attacker){
+      target.ai.target = attacker;
+      target.ai.seenSince = 0;
+      target.ai.retargetAt = Date.now() + rand(1800, 3200);
+    }
     target.hitFlash = 6;
     let hpLeft = amount;
     if (target.shield > 0){
@@ -674,13 +683,15 @@
     victim.health = 0;
     if (attacker) attacker.elims++;
     const killer = attacker ? attacker.name.toUpperCase() : 'THE STORM';
-    if (attacker === players[0]){
-      sfx('kill');
-      loot.push({ type: 'ammo', x: victim.x, y: victim.y, weapon: victim.weapon, ammo: Math.max(6, victim.ammo), mats: 100 });
+    if (attacker === players[0]) sfx('kill');
+    if (victim.isBot && (attacker === players[0] || Math.random() < 0.6)){
+      loot.push({ type: 'ammo', x: victim.x, y: victim.y, weapon: victim.weapon,
+                  ammo: Math.max(6, victim.ammo), mats: 100 });
     }
-    const cls = victim === players[0] ? 'victim' : (attacker === players[0] ? 'killer-you' : 'killer');
-    killFeed(killer + ' <span class="wp">[' + (weaponName || 'storm') + ']</span> ' +
-      '<span class="' + cls + '">' + victim.name.toUpperCase() + '</span>');
+    const killerCls = attacker === players[0] ? 'killer-you' : (attacker ? 'killer' : 'wp');
+    killFeed('<span class="' + killerCls + '">' + killer + '</span> ' +
+      '<span class="wp">[' + (weaponName || 'storm') + ']</span> ' +
+      '<span class="victim">' + victim.name.toUpperCase() + '</span>');
     checkGameOver();
   }
 
@@ -700,6 +711,15 @@
     ent.lastShot = now;
 
     if (w.mag) ent.ammo--;
+
+    // gunfire is audible; distant bot fights fade out with range
+    let shotGain = 1;
+    if (ent !== players[0]){
+      const d = dist(ent.x, ent.y, players[0].x, players[0].y);
+      shotGain = d > 1500 ? 0 : clamp(0.75 - d / 2000, 0, 0.75);
+    }
+    if (shotGain > 0) sfx(ent.weapon === 'shotgun' ? 'shootShotgun' : 'shootRifle', shotGain);
+
     if (ent === players[0]) cam.shake = Math.min(cam.shake + w.kick * 0.45, 2.2);
 
     const pelletCount = w.pellets || 1;
@@ -742,7 +762,7 @@
     const mx = ent.x + Math.cos(ent.angle) * (P_RADIUS + w.range/2);
     const my = ent.y + Math.sin(ent.angle) * (P_RADIUS + w.range/2);
     addParticle(mx, my, '#94a3b8', 5, 100);
-    sfx('pickaxe');
+    sfx('pickaxe', ent === players[0] ? 1 : (dist(ent.x, ent.y, players[0].x, players[0].y) > 700 ? 0.25 : 0.6));
     let hitAny = false;
     for (let e of [...players, ...bots]){
       if (e === ent || e.dead) continue;
@@ -760,16 +780,33 @@
   }
 
   // ---------- AI ----------
+  // Bots pick whoever is closest (with a mild preference for the human), so
+  // they fight each other just as readily as they fight the player.
+  function pickBotTarget(b){
+    let best = null, bestScore = Infinity;
+    for (const e of [players[0], ...bots]){
+      if (!e || e === b || e.dead) continue;
+      const d = dist(b.x, b.y, e.x, e.y);
+      const score = d * (e === players[0] ? 0.85 : 1);
+      if (score < bestScore){ bestScore = score; best = e; }
+    }
+    return best;
+  }
+
   function updateBot(b, dt){
     if (b.dead) return;
     const now = Date.now();
 
-    let target = players[0];
-    if (!target || target.dead){
-      target = null; let bd = 1e9;
-      for (let o of bots){ if (o !== b && !o.dead){ const d = dist(b.x, b.y, o.x, o.y); if (d < bd){ bd = d; target = o; } } }
+    // stick with a target for a couple of seconds, then reconsider who is the
+    // biggest threat; a dead target forces an immediate switch
+    let target = b.ai.target;
+    if (!target || target.dead || now > (b.ai.retargetAt || 0)){
+      const next = pickBotTarget(b);
+      if (next !== target) b.ai.seenSince = 0; // re-acquire before firing
+      target = next;
+      b.ai.target = target;
+      b.ai.retargetAt = now + rand(1400, 2600);
     }
-    b.ai.target = target;
 
     // the storm scares bots more than the player does
     const stormDist = dist(b.x, b.y, storm.cx, storm.cy);

@@ -36,7 +36,9 @@ python3 -m http.server 8080 -b 0.0.0.0
 - **Loot** crates scattered on the map: `AR`/`SG` ammo + materials, `SH` shield, `HP` health.
   Walk over a crate to pick it up.
 - **Storm** closes in over time — stay inside the safe circle or take damage (shields soak it first).
-- Bots hunt you, strafe in firefights and retreat toward the circle when the storm catches them.
+- Bots hunt the nearest target, so they fight each other as readily as they fight you —
+  step back and let two of them trade shots, then clean up the winner.
+- Bots strafe in firefights and retreat toward the circle when the storm catches them.
 - Eliminate all 4 bots and survive the storm for **Victory Royale**. You drop in with 50 shield.
 
 ## Tips
