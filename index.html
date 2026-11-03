@@ -82,6 +82,7 @@
   .subtitle { color: #8a93a0; font-size: 13px; margin-top: 12px; }
   #cursor-tip { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
     font-size: 15px; color: rgba(255,255,255,0.45); z-index: 1; letter-spacing: 2px; text-transform: uppercase; }
+  .dpad-btn:active{ background:rgba(251,191,36,0.35); border-color:#fbbf24; }
 </style>
 </head>
 <body>
@@ -99,6 +100,19 @@
         <div class="bar-wrap"><div class="bar bar-s" id="sh-bar"></div></div></div>
       <div id="mats"><span class="mat">🪵 <b id="mat-wood">500</b></span>
         <span class="mat">🧱 <b id="mat-brick">300</b></span><span class="mat">🔩 <b id="mat-metal">100</b></span></div>
+      <div id="dpad" style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+        <div class="dpad-row" style="display:flex;gap:8px;">
+          <div></div>
+          <button class="dpad-btn" data-key="KeyW" style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-weight:800;cursor:pointer;">▲</button>
+          <div></div>
+        </div>
+        <div class="dpad-row" style="display:flex;gap:8px;align-items:center;">
+          <button class="dpad-btn" data-key="KeyA" style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-weight:800;cursor:pointer;">◀</button>
+          <button class="dpad-btn" data-key="KeyS" style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-weight:800;cursor:pointer;">▼</button>
+          <button class="dpad-btn" data-key="KeyD" style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-weight:800;cursor:pointer;">▶</button>
+        </div>
+      </div>
+      <div id="debug" style="margin-top:8px;font-size:10px;color:#ff5f5f;font-family:monospace;display:none;"></div>
     </div>
     <div id="bottom-right">
       <div id="weapon">ASSAULT RIFLE</div>
@@ -213,8 +227,10 @@
   const trees = [];     // {x,y,r}
   const rocks = [];     // {x,y,r}
 
-  const keys = {};
+  const keys = {};      // real keyboard
+  const vkeys = {};     // virtual keys from on-screen dpad
   const mouse = { x: 0, y: 0, down: false, worldX: 0, worldY: 0 };
+  function isKeyDown(code){ return keys[code] || vkeys[code]; }
   const cam = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0 };
   const storm = { cx: MAP/2, cy: MAP/2, radius: 1800, targetRadius: 140, shrinkStart: 0,
                   shrinkDuration: 220, damage: 1, lastDmg: 0, active: false };
@@ -411,6 +427,18 @@
     else if (e.code === 'KeyR') { rotateRamp(p); reload(p); }
   }, { passive: false });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
+  // on-screen dpad wiring
+  document.querySelectorAll('.dpad-btn').forEach(btn => {
+    const code = btn.getAttribute('data-key');
+    const press = () => { vkeys[code] = true; };
+    const release = () => { vkeys[code] = false; };
+    btn.addEventListener('mousedown', press);
+    btn.addEventListener('touchstart', e => { e.preventDefault(); press(); }, { passive: false });
+    btn.addEventListener('mouseup', release);
+    btn.addEventListener('mouseleave', release);
+    btn.addEventListener('touchend', release);
+    btn.addEventListener('touchcancel', release);
+  });
   window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
   const canvasEl = $('canvas');
   function grabFocus(){ try{ canvasEl.focus(); window.focus(); }catch(e){} }
@@ -727,7 +755,7 @@
 
   function moveEntity(ent, dx, dy, dt, isPlayer){
     if (ent.dead) return;
-    const run = keys['ShiftLeft'] || keys['ShiftRight'];
+    const run = isKeyDown('ShiftLeft') || isKeyDown('ShiftRight');
     const spd = (run ? P_SPEED_SPRINT : P_SPEED) * (ent.isBot ? 0.8 : 1);
     let nx = ent.x + dx * spd * dt;
     let ny = ent.y + dy * spd * dt;
@@ -751,10 +779,10 @@
     p.angle = Math.atan2(mw.y - p.y, mw.x - p.x);
 
     let dx = 0, dy = 0;
-    if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
-    if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
-    if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
-    if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+    if (isKeyDown('KeyW') || isKeyDown('ArrowUp')) dy -= 1;
+    if (isKeyDown('KeyS') || isKeyDown('ArrowDown')) dy += 1;
+    if (isKeyDown('KeyA') || isKeyDown('ArrowLeft')) dx -= 1;
+    if (isKeyDown('KeyD') || isKeyDown('ArrowRight')) dx += 1;
     const len = Math.hypot(dx, dy);
     if (len > 0){ dx /= len; dy /= len; }
     moveEntity(p, dx, dy, dt, true);
@@ -1159,6 +1187,15 @@
 
     // screen-space items
     drawMinimap();
+    // debug
+    const dbg = $('debug');
+    if (state === 'PLAY' && p && !p.dead){
+      const kd = ['KeyW','KeyA','KeyS','KeyD'].filter(c => isKeyDown(c));
+      dbg.style.display = 'block';
+      dbg.textContent = 'keys:[' + kd.join(',') + '] pos:[' + Math.round(p.x) + ',' + Math.round(p.y) + ']';
+    } else {
+      dbg.style.display = 'none';
+    }
   }
 
   function loop(now){
