@@ -198,9 +198,9 @@
   const PLAYER_SPAWN = { x: MAP/2 - 340, y: MAP/2 - 100 };
 
   const WEAPONS = {
-    rifle:  { name: 'ASSAULT RIFLE',  dmg: 24,  range: 720, speed: 1500, rate: 100, spread: 0.022, mag: 30, reserveMax: 90, reload: 1.5, kick: 1.1, color: '#60a5fa', auto: true },
-    shotgun:{ name: 'SHOTGUN',       dmg: 14,  pellets: 9, range: 340, speed: 950,  rate: 520,  spread: 0.20, mag: 6,  reserveMax: 24, reload: 2.4, kick: 4.2, color: '#fbbf24', auto: false },
-    pickaxe:{ name: 'PICKAXE',       dmg: 45,  range: 100, speed: 0,   rate: 420,  spread: 0,   mag: 0,  reserveMax: 0,  reload: 0,   kick: 0,   color: '#94a3b8', auto: false }
+    rifle:  { name: 'ASSAULT RIFLE',  dmg: 18,  range: 720, speed: 1500, rate: 130, spread: 0.030, mag: 30, reserveMax: 90, reload: 1.5, kick: 1.1, color: '#60a5fa', auto: true },
+    shotgun:{ name: 'SHOTGUN',       dmg: 11,  pellets: 9, range: 340, speed: 950,  rate: 620,  spread: 0.22, mag: 6,  reserveMax: 24, reload: 2.4, kick: 4.2, color: '#fbbf24', auto: false },
+    pickaxe:{ name: 'PICKAXE',       dmg: 30,  range: 100, speed: 0,   rate: 420,  spread: 0,   mag: 0,  reserveMax: 0,  reload: 0,   kick: 0,   color: '#94a3b8', auto: false }
   };
   const BUILD_COST = { wall: 10, floor: 8, ramp: 10 };
   const BUILD_HP = { wall: 220, floor: 160, ramp: 170 };
@@ -636,8 +636,10 @@
     return best;
   }
 
+  const BOT_DAMAGE_SCALE = 0.85;
   function damageEnt(target, amount, attacker, weaponName){
     if (target.dead) return;
+    if (attacker && attacker.isBot) amount *= BOT_DAMAGE_SCALE;
     target.hitFlash = 6;
     let hpLeft = amount;
     if (target.shield > 0){
@@ -786,7 +788,7 @@
       // imperfect aim, refreshed a few times a second
       if (now > (b.ai.nextAim || 0)){
         b.ai.nextAim = now + rand(200, 480);
-        b.ai.aimErr = rand(-0.14, 0.14);
+        b.ai.aimErr = rand(-0.15, 0.15);
       }
       if (now > (b.ai.nextStrafe || 0)){
         b.ai.nextStrafe = now + rand(700, 1700);
@@ -802,16 +804,26 @@
 
       const w = WEAPONS[b.weapon];
       if (w.mag && b.ammo <= 0){ b.ammo = w.mag; b.reserve = w.reserveMax; }
-      const canShoot = now - b.ai.lastShot > w.rate * 1.9;
-      if (canShoot && d < w.range * 0.85){
+      // give the player a moment to react: bots need to hold the target in
+      // range for a beat before they open fire
+      const hasShot = d < w.range * 0.8;
+      if (hasShot){
+        if (!b.ai.seenSince) b.ai.seenSince = now;
+      } else {
+        b.ai.seenSince = 0;
+      }
+      const reacted = b.ai.seenSince && now - b.ai.seenSince > 380;
+      const canShoot = reacted && now - b.ai.lastShot > w.rate * 2.2;
+      if (canShoot && d < 90){
+        // point blank: swing instead of standing there firing
+        b.angle = aim;
+        meleeBot(b);
+        b.ai.lastShot = now;
+      } else if (canShoot && hasShot){
         const trueAngle = b.angle;
         b.angle = aim + (b.ai.aimErr || 0);
         shootBot(b);
         b.angle = trueAngle;
-        b.ai.lastShot = now;
-      } else if (canShoot && d < 100){
-        b.angle = aim;
-        meleeBot(b);
         b.ai.lastShot = now;
       }
     } else {
