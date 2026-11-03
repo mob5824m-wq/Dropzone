@@ -86,7 +86,7 @@
 </head>
 <body>
 <div id="cursor-tip">CLICK TO DROP IN</div>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" tabindex="0"></canvas>
 <div id="ui">
   <div id="crosshair"></div>
   <div id="hit-marker"></div>
@@ -358,9 +358,10 @@
   function gameStart(){
     if (state !== 'MENU' && state !== 'GAMEOVER') return;
     try{
-      ensureAudio();
-      mouse.down = false;
-      $('cursor-tip').style.display = 'none';
+    ensureAudio();
+    mouse.down = false;
+    $('cursor-tip').style.display = 'none';
+    grabFocus();
       players.length = 0; bots.length = 0; builds.length = 0; loot.length = 0;
       particles.length = 0; floats.length = 0; tracers.length = 0; killFeedItems = [];
       killFeed.innerHTML = '';
@@ -411,7 +412,10 @@
   }, { passive: false });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
   window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  const canvasEl = $('canvas');
+  function grabFocus(){ try{ canvasEl.focus(); window.focus(); }catch(e){} }
   window.addEventListener('mousedown', e => {
+    grabFocus();
     ensureAudio();
     if (state === 'MENU' || state === 'GAMEOVER') { gameStart(); return; }
     if (e.button === 0) mouse.down = true;
@@ -419,6 +423,14 @@
   });
   window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; });
   window.addEventListener('contextmenu', e => e.preventDefault());
+  // click anywhere to focus input
+  window.addEventListener('click', grabFocus);
+  // stop arrow keys / wasd from scrolling the page
+  window.addEventListener('keydown', e => {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Space'].includes(e.code)){
+      e.preventDefault();
+    }
+  }, { passive: false });
 
   function updateBuildUI(){
     const p = players[0];
