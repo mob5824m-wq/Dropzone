@@ -219,6 +219,19 @@
   const storm = { cx: MAP/2, cy: MAP/2, radius: 1800, targetRadius: 140, shrinkStart: 0,
                   shrinkDuration: 220, damage: 1, lastDmg: 0, active: false };
   let killFeedItems = [];
+  let lastError = null;
+
+  function showError(msg){
+    lastError = msg;
+    const el = $('start-screen');
+    el.innerHTML = '<h1 style="color:#ff5f5f">GAME ERROR</h1><p style="color:#e2e8f0;max-width:560px;line-height:1.5;">'+msg.replace(/</g,'&lt;')+'</p><button onclick="location.reload()">RELOAD PAGE</button>';
+    el.classList.remove('hidden');
+    console.error('DROPZONE ERROR:', msg);
+  }
+  window.onerror = function(msg, url, line){
+    showError('JavaScript error: '+msg+' (line '+line+')');
+    return true;
+  };
 
   // ---------- audio ----------
   let audioCtx;
@@ -344,37 +357,41 @@
 
   function gameStart(){
     if (state !== 'MENU' && state !== 'GAMEOVER') return;
-    ensureAudio();
-    mouse.down = false;
-    $('cursor-tip').style.display = 'none';
-    players.length = 0; bots.length = 0; builds.length = 0; loot.length = 0;
-    particles.length = 0; floats.length = 0; tracers.length = 0; killFeedItems = [];
-    killFeed.innerHTML = '';
+    try{
+      ensureAudio();
+      mouse.down = false;
+      $('cursor-tip').style.display = 'none';
+      players.length = 0; bots.length = 0; builds.length = 0; loot.length = 0;
+      particles.length = 0; floats.length = 0; tracers.length = 0; killFeedItems = [];
+      killFeed.innerHTML = '';
 
-    const p = makeEntity(MAP/2 - 340, MAP/2 - 100, false, 'You', '#60a5fa', 'rifle');
-    players.push(p);
+      const p = makeEntity(MAP/2 - 340, MAP/2 - 100, false, 'You', '#60a5fa', 'rifle');
+      players.push(p);
 
-    const colors = ['#f87171', '#fbbf24', '#34d399', '#a78bfa', '#fb7185'];
-    for (let i = 0; i < 4; i++){
-      const bx = MAP/2 + rand(-1300, 1300);
-      const by = MAP/2 + rand(-1300, 1300);
-      const b = makeEntity(bx, by, true, 'BOT ' + (i + 1), colors[i],
-        i % 2 === 0 ? 'rifle' : 'shotgun');
-      bots.push(b);
+      const colors = ['#f87171', '#fbbf24', '#34d399', '#a78bfa', '#fb7185'];
+      for (let i = 0; i < 4; i++){
+        const bx = MAP/2 + rand(-1300, 1300);
+        const by = MAP/2 + rand(-1300, 1300);
+        const b = makeEntity(bx, by, true, 'BOT ' + (i + 1), colors[i],
+          i % 2 === 0 ? 'rifle' : 'shotgun');
+        bots.push(b);
+      }
+
+      initMap();
+      storm.radius = 1800; storm.shrinkStart = Date.now();
+      storm.cx = MAP/2; storm.cy = MAP/2;
+      cam.x = p.x; cam.y = p.y;
+      cam.shake = 0;
+      state = 'PLAY';
+      els.start.classList.add('hidden');
+      els.gameOver.classList.add('hidden');
+      els.buildPanel.style.display = 'none';
+      els.buildHint.style.display = 'none';
+      lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }catch(e){
+      showError('Failed to start game: ' + (e && e.message ? e.message : String(e)));
     }
-
-    initMap();
-    storm.radius = 1800; storm.shrinkStart = Date.now();
-    storm.cx = MAP/2; storm.cy = MAP/2;
-    cam.x = p.x; cam.y = p.y;
-    cam.shake = 0;
-    state = 'PLAY';
-    els.start.classList.add('hidden');
-    els.gameOver.classList.add('hidden');
-    els.buildPanel.style.display = 'none';
-    els.buildHint.style.display = 'none';
-    lastTime = performance.now();
-    requestAnimationFrame(loop);
   }
 
   // ---------- input ----------
@@ -1037,11 +1054,16 @@
     ctx.setLineDash([]);
     ctx.restore();
     // outside storm vignette (screen space)
-    const grad = ctx.createRadialGradient(sx, sy, storm.radius * 0.45, sx, sy, Math.max(W, H) * 1.4);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const scx = W/2 + (storm.cx - cam.x);
+    const scy = H/2 + (storm.cy - cam.y);
+    const grad = ctx.createRadialGradient(scx, scy, storm.radius * 0.45, scx, scy, Math.max(W, H) * 1.4);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(1, 'rgba(120, 24, 24, 0.52)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
 
   function drawMinimap(){
