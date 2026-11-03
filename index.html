@@ -232,7 +232,7 @@
   const keys = {};
   const vkeys = {}; // virtual keys from on-screen dpad
   const mouse = { x: 0, y: 0, down: false, worldX: 0, worldY: 0 };
-  const cam = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0 };
+  const cam = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0, t: 0 };
   const storm = { cx: MAP/2, cy: MAP/2, radius: 1800, targetRadius: 140, shrinkStart: 0,
                   shrinkDuration: 220, damage: 1, lastDmg: 0 };
   let killFeedItems = [];
@@ -434,7 +434,7 @@
       storm.cx = MAP/2; storm.cy = MAP/2;
       storm.damage = 1; storm.lastDmg = Date.now();
       cam.x = p.x; cam.y = p.y;
-      cam.shake = 0; cam.shakeX = 0; cam.shakeY = 0;
+      cam.shake = 0; cam.shakeX = 0; cam.shakeY = 0; cam.t = 0;
       state = 'PLAY';
       els.start.classList.add('hidden');
       els.gameOver.classList.add('hidden');
@@ -698,7 +698,7 @@
     ent.lastShot = now;
 
     if (w.mag) ent.ammo--;
-    if (ent === players[0]) cam.shake = Math.min(cam.shake + w.kick, 9);
+    if (ent === players[0]) cam.shake = Math.min(cam.shake + w.kick * 0.45, 2.2);
 
     const pelletCount = w.pellets || 1;
     let anyHit = false;
@@ -753,7 +753,7 @@
       els.hitMarker.classList.add('active');
       setTimeout(() => els.hitMarker.classList.remove('active'), 120);
     }
-    if (ent === players[0]) cam.shake = Math.min(cam.shake + 1.5, 9);
+    if (ent === players[0]) cam.shake = Math.min(cam.shake + 0.45, 2.2);
     if (ent === players[0]) updateHUD();
   }
 
@@ -956,18 +956,27 @@
   function updateCamera(dt){
     const p = players[0];
     if (!p || p.dead) return;
-    const backDist = 150;
-    const sideOff = 24;
-    const idealX = p.x - Math.cos(p.angle) * backDist + Math.sin(p.angle) * sideOff;
-    const idealY = p.y - Math.sin(p.angle) * backDist - Math.cos(p.angle) * sideOff;
-    cam.x += (idealX - cam.x) * Math.min(dt * 14, 1);
-    cam.y += (idealY - cam.y) * Math.min(dt * 14, 1);
-    if (cam.shake > 0){
-      cam.shake *= 0.78;
-      cam.shakeX = (Math.random() - 0.5) * cam.shake * 2.5;
-      cam.shakeY = (Math.random() - 0.5) * cam.shake * 2.5;
-      if (cam.shake < 0.2) cam.shake = 0;
-    } else { cam.shakeX = 0; cam.shakeY = 0; }
+    // Keep the player centred with a frame-rate independent smooth follow.
+    // (The old camera sat 150px behind the aim direction. Since the aim angle
+    // is derived from the mouse in world space and the camera position feeds
+    // that conversion, the two formed a feedback loop: the view swung around
+    // the player whenever the mouse moved, which read as constant shaking.)
+    const follow = 1 - Math.exp(-dt * 16);
+    cam.x += (p.x - cam.x) * follow;
+    cam.y += (p.y - cam.y) * follow;
+
+    // Recoil: a small "trauma" value that decays smoothly into a low-frequency
+    // wobble. The old code added random per-frame jitter, which looked like
+    // vibration rather than weapon kick.
+    cam.t += dt;
+    cam.shake = Math.max(0, cam.shake - dt * 9);
+    if (cam.shake > 0.01){
+      const amp = cam.shake * 1.8;
+      cam.shakeX = Math.sin(cam.t * 47) * amp;
+      cam.shakeY = Math.sin(cam.t * 61 + 1.7) * amp * 0.75;
+    } else {
+      cam.shake = 0; cam.shakeX = 0; cam.shakeY = 0;
+    }
   }
 
   // ---------- update ----------
