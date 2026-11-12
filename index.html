@@ -8,7 +8,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0c10; color: #e2e8f0;
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; user-select: none; -webkit-user-select: none; }
-  #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; background: #111827; }
+  #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; background: #111827; cursor: none; }
   #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
   .panel { position: absolute; pointer-events: auto; background: rgba(11, 12, 16, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.10); border-radius: 10px; padding: 10px 14px;
@@ -55,12 +55,14 @@
   #minimap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; image-rendering: pixelated; }
   #minimap-label { position: absolute; top: -21px; left: 6px; font-size: 10.5px; color: #94a3b8; letter-spacing: 1.5px;
     text-transform: uppercase; }
-  #kill-feed { position: absolute; bottom: 22px; right: 22px; width: 320px; display: flex; flex-direction: column-reverse;
+  #kill-feed { position: absolute; top: 206px; right: 20px; width: 300px; display: flex; flex-direction: column;
     gap: 5px; pointer-events: none; z-index: 26; }
+  @media (max-height: 560px){ #kill-feed { top: 196px; width: 250px; } }
   .kill-item { background: rgba(11,12,16,0.82); border-left: 3px solid #fbbf24; padding: 6px 10px; border-radius: 0 8px 8px 0;
     font-size: 12.5px; color: #e2e8f0; backdrop-filter: blur(4px); animation: slideIn .22s ease both; }
   @keyframes slideIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
   .kill-item .victim { color: #ff5f5f; font-weight: 800; } .kill-item .wp { color: #94a3b8; font-weight: 600; }
+  .kill-item .killer { color: #fbbf24; font-weight: 800; } .kill-item .killer-you { color: #34d399; font-weight: 800; }
   .overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, #161a24 0%, #0b0c10 70%);
     display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 40; pointer-events: auto;
     text-align: center; }
@@ -80,24 +82,22 @@
   button:active { transform: translateY(3px); box-shadow: 0 3px 0 #b47a0a; }
   button:hover { filter: brightness(1.1); }
   .subtitle { color: #8a93a0; font-size: 13px; margin-top: 12px; }
-  #cursor-tip { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
-    font-size: 15px; color: rgba(255,255,255,0.45); z-index: 1; letter-spacing: 2px; text-transform: uppercase; }
   /* on-screen dpad */
   #dpad { margin-top: 12px; display: flex; gap: 8px; justify-content: center; pointer-events: none; }
-  #dpad-row { pointer-events: auto; }
+  .dpad-row { pointer-events: auto; }
   .dpad-btn { width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3);
     background: rgba(255,255,255,0.12); color: #fff; font-weight: 800; cursor: pointer; pointer-events: auto; }
   .dpad-btn:active { background: rgba(251,191,36,0.35); border-color: #fbbf24; }
-  #debug { margin-top: 8px; font-size: 10px; color: #ff5f5f; font-family: monospace; display: none; }
   /* shoot button (mobile) */
-  #shoot-btn { position: absolute; bottom: 22px; right: 22px; width: 70px; height: 70px; border-radius: 50%;
+  #shoot-btn { position: absolute; bottom: 26px; right: 26px; width: 76px; height: 76px; border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15); color: #fff; font-weight: 900;
     font-size: 28px; pointer-events: auto; z-index: 30; display: none; }
   #shoot-btn:active { background: rgba(255,255,255,0.35); }
+  body.touch-hud #bottom-right { bottom: 118px; }
+  body.touch-hud #kill-feed { top: 206px; }
 </style>
 </head>
 <body>
-<div id="cursor-tip">CLICK TO DROP IN</div>
 <canvas id="canvas"></canvas>
 <div id="ui">
   <div id="crosshair"></div>
@@ -112,25 +112,24 @@
       <div id="mats"><span class="mat">🪵 <b id="mat-wood">500</b></span>
         <span class="mat">🧱 <b id="mat-brick">300</b></span><span class="mat">🔩 <b id="mat-metal">100</b></span></div>
       <div id="dpad">
-        <div id="dpad-row" style="display:flex;gap:8px;">
+        <div class="dpad-row" style="display:flex;gap:8px;">
           <div style="width:44px;"></div>
           <button class="dpad-btn" data-key="KeyW">▲</button>
           <div style="width:44px;"></div>
         </div>
-        <div id="dpad-row" style="display:flex;gap:8px;align-items:center;">
+        <div class="dpad-row" style="display:flex;gap:8px;align-items:center;">
           <button class="dpad-btn" data-key="KeyA">◀</button>
           <button class="dpad-btn" data-key="KeyS">▼</button>
           <button class="dpad-btn" data-key="KeyD">▶</button>
         </div>
       </div>
-      <div id="debug" style="margin-top:8px;font-size:10px;color:#ff5f5f;font-family:monospace;display:none;"></div>
     </div>
     <div id="bottom-right">
       <div id="weapon">ASSAULT RIFLE</div>
       <div id="ammo">30 <span style="opacity:.65;font-size:16px">/ 90</span></div>
       <div id="build-hint">BUILD MODE — 1 Wall 2 Floor 3 Ramp · F place · R rotate · Q/E cycle</div>
-      <button id="shoot-btn">SHOOT</button>
     </div>
+    <button id="shoot-btn">SHOOT</button>
     <div id="build-panel">
       <div class="bp active" id="bp-wall">Wall<span class="mat" style="gap:3px">10 <kbd>[1]</kbd></span></div>
       <div class="bp" id="bp-floor">Floor<span class="mat" style="gap:3px">8 <kbd>[2]</kbd></span></div>
@@ -143,11 +142,11 @@
 <div id="start-screen" class="overlay">
   <h1>DROPZONE</h1>
   <div class="tag">Local Battle Royale</div>
-  <p>Build walls, ramps and floors. Outlast the shrinking storm. Eliminate all bots for Victory Royale.</p>
+  <p>Build walls, ramps and floors. Outlast the shrinking storm. The bots fight each other too —<br>let them soften each other up, then eliminate the survivors for Victory Royale.</p>
   <div class="controls-hint">
-    <kbd>W A S D</kbd> Move &nbsp; <kbd>MOUSE</kbd> Aim &nbsp; <kbd>CLICK</kbd> Shoot<br>
+    <kbd>W A S D</kbd> Move &nbsp; <kbd>SHIFT</kbd> Sprint &nbsp; <kbd>MOUSE</kbd> Aim &nbsp; <kbd>CLICK</kbd> Shoot<br>
     <kbd>1 2 3</kbd> Weapons &nbsp; <kbd>4</kbd> Build Mode &nbsp; <kbd>F</kbd> Place Build &nbsp; <kbd>R</kbd> Reload / Rotate<br>
-    <kbd>Q</kbd> <kbd>E</kbd> Cycle Build Piece &nbsp; Walk over loot crates to pick up
+    In build mode <kbd>1 2 3</kbd> pick Wall / Floor / Ramp &nbsp; <kbd>Q</kbd> <kbd>E</kbd> cycle &nbsp; Walk over loot to pick it up
   </div>
   <button onclick="game.start()">DROP IN</button>
   <div class="subtitle">Single player vs 4 bots • Local only • Headphones recommended</div>
@@ -187,7 +186,7 @@
     error: $('error-screen'), errorMsg: $('error-msg'),
     goTitle: $('go-title'), goTag: $('go-tag'), goSub: $('go-sub'), goStats: $('go-stats'),
     crosshair: $('crosshair'), hitMarker: $('hit-marker'),
-    dpad: $('dpad'), debug: $('debug'), shootBtn: $('shoot-btn')
+    dpad: $('dpad'), shootBtn: $('shoot-btn')
   };
 
   // ---------- config ----------
@@ -196,11 +195,12 @@
   const P_SPEED = 250, P_SPEED_SPRINT = 350;
   const P_RADIUS = 20;
   const BUILD_RANGE = 620;
+  const PLAYER_SPAWN = { x: MAP/2 - 340, y: MAP/2 - 100 };
 
   const WEAPONS = {
-    rifle:  { name: 'ASSAULT RIFLE',  dmg: 24,  range: 720, speed: 1500, rate: 100, spread: 0.022, mag: 30, reserveMax: 90, reload: 1.5, kick: 1.1, color: '#60a5fa', auto: true },
-    shotgun:{ name: 'SHOTGUN',       dmg: 14,  pellets: 9, range: 340, speed: 950,  rate: 520,  spread: 0.20, mag: 6,  reserveMax: 24, reload: 2.4, kick: 4.2, color: '#fbbf24', auto: false },
-    pickaxe:{ name: 'PICKAXE',       dmg: 45,  range: 100, speed: 0,   rate: 420,  spread: 0,   mag: 0,  reserveMax: 0,  reload: 0,   kick: 0,   color: '#94a3b8', auto: false }
+    rifle:  { name: 'ASSAULT RIFLE',  dmg: 18,  range: 720, speed: 1500, rate: 130, spread: 0.030, mag: 30, reserveMax: 90, reload: 1.5, kick: 1.1, color: '#60a5fa', auto: true },
+    shotgun:{ name: 'SHOTGUN',       dmg: 11,  pellets: 9, range: 340, speed: 950,  rate: 620,  spread: 0.22, mag: 6,  reserveMax: 24, reload: 2.4, kick: 4.2, color: '#fbbf24', auto: false },
+    pickaxe:{ name: 'PICKAXE',       dmg: 30,  range: 100, speed: 0,   rate: 420,  spread: 0,   mag: 0,  reserveMax: 0,  reload: 0,   kick: 0,   color: '#94a3b8', auto: false }
   };
   const BUILD_COST = { wall: 10, floor: 8, ramp: 10 };
   const BUILD_HP = { wall: 220, floor: 160, ramp: 170 };
@@ -232,7 +232,7 @@
   const keys = {};
   const vkeys = {}; // virtual keys from on-screen dpad
   const mouse = { x: 0, y: 0, down: false, worldX: 0, worldY: 0 };
-  const cam = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0 };
+  const cam = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0, t: 0 };
   const storm = { cx: MAP/2, cy: MAP/2, radius: 1800, targetRadius: 140, shrinkStart: 0,
                   shrinkDuration: 220, damage: 1, lastDmg: 0 };
   let killFeedItems = [];
@@ -257,17 +257,19 @@
     o.connect(g); g.connect(audioCtx.destination);
     o.start(t); o.stop(t + duration);
   }
-  function sfx(kind){
+  function sfx(kind, gain){
+    gain = gain == null ? 1 : gain;
+    if (gain <= 0) return;
     ensureAudio();
-    if (kind === 'shootRifle')  { playTone(700, 'square', 0.05, 0.12); playTone(1400, 'square', 0.03, 0.06); }
-    else if (kind === 'shootShotgun'){ playTone(160, 'sawtooth', 0.12, 0.14); playTone(260, 'sawtooth', 0.08, 0.08); }
-    else if (kind === 'pickaxe'){ playTone(120, 'square', 0.1, 0.1); }
-    else if (kind === 'hit')    { playTone(700, 'square', 0.08, 0.1); }
-    else if (kind === 'hitBuild'){ playTone(400, 'square', 0.06, 0.08); }
-    else if (kind === 'build')  { playTone(1100, 'sine', 0.06, 0.07); }
-    else if (kind === 'reload') { playTone(400, 'square', 0.06, 0.09); playTone(700, 'square', 0.06, 0.07); }
-    else if (kind === 'kill')   { playTone(900, 'sine', 0.15, 0.12); playTone(1350, 'sine', 0.15, 0.1); }
-    else if (kind === 'storm')  { playTone(140, 'sawtooth', 0.3, 0.06); }
+    if (kind === 'shootRifle')  { playTone(700, 'square', 0.05, 0.12 * gain); playTone(1400, 'square', 0.03, 0.06 * gain); }
+    else if (kind === 'shootShotgun'){ playTone(160, 'sawtooth', 0.12, 0.14 * gain); playTone(260, 'sawtooth', 0.08, 0.08 * gain); }
+    else if (kind === 'pickaxe'){ playTone(120, 'square', 0.1, 0.1 * gain); }
+    else if (kind === 'hit')    { playTone(700, 'square', 0.08, 0.1 * gain); }
+    else if (kind === 'hitBuild'){ playTone(400, 'square', 0.06, 0.08 * gain); }
+    else if (kind === 'build')  { playTone(1100, 'sine', 0.06, 0.07 * gain); }
+    else if (kind === 'reload') { playTone(400, 'square', 0.06, 0.09 * gain); playTone(700, 'square', 0.06, 0.07 * gain); }
+    else if (kind === 'kill')   { playTone(900, 'sine', 0.15, 0.12 * gain); playTone(1350, 'sine', 0.15, 0.1 * gain); }
+    else if (kind === 'storm')  { playTone(140, 'sawtooth', 0.3, 0.06 * gain); }
   }
 
   function showError(msg){
@@ -297,6 +299,12 @@
   function worldFromScreen(sx, sy){
     return { x: sx - W/2 + cam.x, y: sy - H/2 + cam.y };
   }
+  // culling helper: world coordinates, not screen coordinates
+  function inView(x, y, pad){
+    pad = pad || 0;
+    return x > cam.x - W/2 - pad && x < cam.x + W/2 + pad &&
+           y > cam.y - H/2 - pad && y < cam.y + H/2 + pad;
+  }
 
   function addParticle(x, y, color, count, speed){
     for (let i = 0; i < count; i++){
@@ -312,9 +320,17 @@
   function addTracer(x1, y1, x2, y2, color){
     tracers.push({ x1, y1, x2, y2, color, life: 0.09 });
   }
-  function killFeed(text, color){
-    killFeedItems.push({ text, color, life: 4.5 });
-    if (killFeedItems.length > 6) killFeedItems.shift();
+  let killFeedMarkup = '';
+  function killFeed(text){
+    killFeedItems.push({ text, life: 4.5 });
+    if (killFeedItems.length > 5) killFeedItems.shift();
+    renderKillFeed();
+  }
+  function renderKillFeed(){
+    const markup = killFeedItems.map(i => '<div class="kill-item">' + i.text + '</div>').join('');
+    if (markup === killFeedMarkup) return;
+    killFeedMarkup = markup;
+    els.killFeed.innerHTML = markup;
   }
 
   // ---------- entity factory ----------
@@ -329,11 +345,17 @@
       buildMode: false, buildPiece: 'wall', buildRot: 0,
       mats: { wood: 500, brick: 300, metal: 100 },
       dead: false, isBot, name, color, hitFlash: 0, elims: 0,
-      ai: { state: 'wander', timer: 0, wx: x, wy: y, lastShot: 0, target: null }
+      ai: { state: 'wander', timer: 0, wx: x, wy: y, lastShot: 0, target: null,
+            retargetAt: 0, seenSince: 0, aimErr: 0, nextAim: 0, nextStrafe: 0, strafe: 1 }
     };
   }
 
   function setWeapon(ent, wName){
+    if (!WEAPONS[wName]) return;
+    if (ent.loadout[ent.weapon]){
+      ent.loadout[ent.weapon].ammo = ent.ammo;
+      ent.loadout[ent.weapon].reserve = ent.reserve;
+    }
     ent.weapon = wName;
     const w = WEAPONS[wName];
     ent.ammo = ent.loadout[wName].ammo;
@@ -348,19 +370,33 @@
   }
 
   function initMap(){
-    trees.length = 0; rocks.length = 0;
+    trees.length = 0; rocks.length = 0; loot.length = 0;
     for (let i = 0; i < 150; i++){
       let x = rand(140, MAP - 140), y = rand(140, MAP - 140);
       const d = dist(x, y, MAP/2, MAP/2);
       if (d < 520) { x += (Math.random()-0.5) * 900; y += (Math.random()-0.5) * 900; }
+      x = clamp(x, 140, MAP - 140); y = clamp(y, 140, MAP - 140);
+      // never block the drop-in spot
+      if (dist(x, y, PLAYER_SPAWN.x, PLAYER_SPAWN.y) < 240) continue;
       trees.push({ x, y, r: 32 });
     }
     for (let i = 0; i < 70; i++){
-      rocks.push({ x: rand(120, MAP - 120), y: rand(120, MAP - 120), r: 28 });
+      const x = rand(120, MAP - 120), y = rand(120, MAP - 120);
+      if (dist(x, y, PLAYER_SPAWN.x, PLAYER_SPAWN.y) < 240) continue;
+      rocks.push({ x, y, r: 28 });
     }
-    for (let i = 0; i < 6; i++){
-      loot.push({ x: rand(300, MAP - 300), y: rand(300, MAP - 300),
-        weapon: Math.random() < 0.5 ? 'shotgun' : 'rifle', ammo: 18, mats: 60 });
+    for (let i = 0; i < 12; i++){
+      let x = rand(300, MAP - 300), y = rand(300, MAP - 300);
+      // keep the spawn area uncontested
+      if (dist(x, y, PLAYER_SPAWN.x, PLAYER_SPAWN.y) < 260){
+        x += (Math.random() < 0.5 ? -1 : 1) * rand(300, 620);
+        y += (Math.random() < 0.5 ? -1 : 1) * rand(300, 620);
+      }
+      x = clamp(x, 160, MAP - 160); y = clamp(y, 160, MAP - 160);
+      const kind = i % 4 === 1 ? 'shield' : (i % 4 === 2 ? 'health' : 'ammo');
+      loot.push({ type: kind, x, y,
+        weapon: Math.random() < 0.5 ? 'shotgun' : 'rifle',
+        ammo: 18, mats: 60, shield: 50, heal: 35 });
     }
   }
 
@@ -369,35 +405,49 @@
       if (state !== 'MENU' && state !== 'GAMEOVER') return;
       ensureAudio();
       mouse.down = false;
-      $('cursor-tip').style.display = 'none';
+      shootPressed = false;
+      for (const k in keys) keys[k] = false;
+      for (const k in vkeys) vkeys[k] = false;
       players.length = 0; bots.length = 0; builds.length = 0; loot.length = 0;
       particles.length = 0; floats.length = 0; tracers.length = 0; killFeedItems = [];
-      els.killFeed.innerHTML = '';
+      killFeedMarkup = ''; els.killFeed.innerHTML = '';
+      els.hitMarker.classList.remove('active');
 
-      const p = makeEntity(MAP/2 - 340, MAP/2 - 100, false, 'You', '#60a5fa', 'rifle');
+      const p = makeEntity(PLAYER_SPAWN.x, PLAYER_SPAWN.y, false, 'You', '#60a5fa', 'rifle');
+      p.shield = 50; // a little opening buffer
       players.push(p);
 
       const colors = ['#f87171', '#fbbf24', '#34d399', '#a78bfa', '#fb7185'];
       for (let i = 0; i < 4; i++){
-        const bx = MAP/2 + rand(-1300, 1300);
-        const by = MAP/2 + rand(-1300, 1300);
+        // never drop a bot on top of the player
+        let bx = 0, by = 0, tries = 0;
+        do {
+          bx = MAP/2 + rand(-1300, 1300);
+          by = MAP/2 + rand(-1300, 1300);
+          tries++;
+        } while (dist(bx, by, p.x, p.y) < 950 && tries < 80);
         const b = makeEntity(bx, by, true, 'BOT ' + (i + 1), colors[i],
           i % 2 === 0 ? 'rifle' : 'shotgun');
+        b.ai.aimErr = 0;
         bots.push(b);
       }
 
       initMap();
       storm.radius = 1800; storm.shrinkStart = Date.now();
       storm.cx = MAP/2; storm.cy = MAP/2;
+      storm.damage = 1; storm.lastDmg = Date.now();
       cam.x = p.x; cam.y = p.y;
-      cam.shake = 0;
+      cam.shake = 0; cam.shakeX = 0; cam.shakeY = 0; cam.t = 0;
       state = 'PLAY';
       els.start.classList.add('hidden');
       els.gameOver.classList.add('hidden');
       els.error.classList.add('hidden');
       els.buildPanel.style.display = 'none';
       els.buildHint.style.display = 'none';
-      els.shootBtn.style.display = (W <= 768 || H <= 768) ? 'block' : 'none';
+      const touchHud = (W <= 768 || H <= 768);
+      els.shootBtn.style.display = touchHud ? 'block' : 'none';
+      document.body.classList.toggle('touch-hud', touchHud);
+      updateHUD();
       lastTime = performance.now();
       requestAnimationFrame(loop);
     }catch(e){
@@ -411,9 +461,9 @@
     if (state !== 'PLAY') return;
     const p = players[0];
     if (p.dead) return;
-    if (e.code === 'Key1') setWeapon(p, 'rifle');
-    else if (e.code === 'Key2') setWeapon(p, 'shotgun');
-    else if (e.code === 'Key3') setWeapon(p, 'pickaxe');
+    if (e.code === 'Key1') { if (p.buildMode) { p.buildPiece = 'wall'; updateBuildUI(); } else setWeapon(p, 'rifle'); }
+    else if (e.code === 'Key2') { if (p.buildMode) { p.buildPiece = 'floor'; updateBuildUI(); } else setWeapon(p, 'shotgun'); }
+    else if (e.code === 'Key3') { if (p.buildMode) { p.buildPiece = 'ramp'; updateBuildUI(); } else setWeapon(p, 'pickaxe'); }
     else if (e.code === 'Key4') { p.buildMode = !p.buildMode; updateBuildUI(); }
     else if (e.code === 'KeyQ') { p.buildPiece = p.buildPiece === 'wall' ? 'ramp' : (p.buildPiece === 'floor' ? 'wall' : 'floor'); updateBuildUI(); }
     else if (e.code === 'KeyE') { p.buildPiece = p.buildPiece === 'wall' ? 'floor' : (p.buildPiece === 'floor' ? 'ramp' : 'wall'); updateBuildUI(); }
@@ -447,15 +497,45 @@
   shootBtn.addEventListener('touchend', shootRelease);
   shootBtn.addEventListener('touchcancel', shootRelease);
 
-  window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  function aimAt(x, y){
+    mouse.x = x; mouse.y = y;
+    if (els.crosshair){
+      els.crosshair.style.left = x + 'px';
+      els.crosshair.style.top = y + 'px';
+    }
+    if (els.hitMarker){
+      els.hitMarker.style.left = x + 'px';
+      els.hitMarker.style.top = y + 'px';
+    }
+  }
+  aimAt(window.innerWidth / 2, window.innerHeight / 2);
+  window.addEventListener('mousemove', e => { aimAt(e.clientX, e.clientY); });
   window.addEventListener('mousedown', e => {
     ensureAudio();
-    if (state === 'MENU' || state === 'GAMEOVER') { gameStart(); return; }
-    if (e.button === 0) mouse.down = true;
+    if (state === 'MENU') { gameStart(); return; }
+    if (state !== 'PLAY') return;
+    // clicks on HUD buttons / build panel should not fire the weapon
+    if (e.target && e.target.closest && e.target.closest('button, .overlay, #build-panel')) return;
+    if (e.button === 0) { mouse.down = true; aimAt(e.clientX, e.clientY); }
     if (e.button === 2) e.preventDefault();
   });
   window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; });
   window.addEventListener('contextmenu', e => e.preventDefault());
+
+  // touch: drag anywhere on the play area to aim, tap the SHOOT button to fire
+  window.addEventListener('touchmove', e => {
+    if (state !== 'PLAY' || !e.touches.length) return;
+    const t = e.touches[0];
+    aimAt(t.clientX, t.clientY);
+  }, { passive: true });
+
+  // dropping focus must not leave keys stuck down
+  window.addEventListener('blur', () => {
+    for (const k in keys) keys[k] = false;
+    for (const k in vkeys) vkeys[k] = false;
+    mouse.down = false;
+    shootPressed = false;
+  });
 
   // prevent scroll on game keys
   window.addEventListener('keydown', e => {
@@ -511,6 +591,8 @@
         sfx('build');
         addFloat(target.x, target.y - 60, '-' + cost, '#fbbf24');
         updateHUD();
+      } else {
+        addFloat(p.x, p.y - 52, have < cost ? 'NOT ENOUGH MATERIALS' : "CAN'T BUILD HERE", '#ff5f5f');
       }
     }
   }
@@ -529,7 +611,7 @@
     function consider(obj, d){ if (d < bestDist){ best = obj; bestDist = d; } }
     for (let e of [...players, ...bots]){
       if (!e || e === ignoreEnt || e.dead) continue;
-      const t = clamp(((e.x - x1) * ux + (e.y - y1) * uy) / len, 0, len);
+      const t = clamp((e.x - x1) * ux + (e.y - y1) * uy, 0, len);
       const px = x1 + ux * t, py = y1 + uy * t;
       const d = dist(e.x, e.y, px, py);
       if (d < P_RADIUS + 5) consider({ ent: e, x: px, y: py, dist: t }, t);
@@ -557,8 +639,16 @@
     return best;
   }
 
+  const BOT_DAMAGE_SCALE = 0.85;
   function damageEnt(target, amount, attacker, weaponName){
     if (target.dead) return;
+    if (attacker && attacker.isBot) amount *= BOT_DAMAGE_SCALE;
+    // a bot that gets shot turns on whoever shot it
+    if (target.isBot && attacker && attacker !== target && target.ai && target.ai.target !== attacker){
+      target.ai.target = attacker;
+      target.ai.seenSince = 0;
+      target.ai.retargetAt = Date.now() + rand(1800, 3200);
+    }
     target.hitFlash = 6;
     let hpLeft = amount;
     if (target.shield > 0){
@@ -573,7 +663,7 @@
       addFloat(target.x, target.y - 40, '-' + Math.ceil(hpLeft), '#ff5f5f');
     }
     addParticle(target.x, target.y - 10, '#ff4d4d', 7, 110);
-    sfx('hit');
+    if (target === players[0] || attacker === players[0]) sfx('hit');
     if (target.health <= 0) doKill(target, attacker, weaponName);
   }
   function damageBuild(b, amount){
@@ -588,15 +678,20 @@
   }
 
   function doKill(victim, attacker, weaponName){
+    if (victim.dead) return;
     victim.dead = true;
-    if (attacker){
-      attacker.elims++;
-      if (attacker === players[0]){
-        sfx('kill');
-        killFeed(attacker.name.toUpperCase() + ' eliminated <span class="victim">' + victim.name.toUpperCase() + '</span>', '#fff');
-        loot.push({ x: victim.x, y: victim.y, weapon: victim.weapon, ammo: Math.max(0, victim.ammo), mats: 100 });
-      }
+    victim.health = 0;
+    if (attacker) attacker.elims++;
+    const killer = attacker ? attacker.name.toUpperCase() : 'THE STORM';
+    if (attacker === players[0]) sfx('kill');
+    if (victim.isBot && (attacker === players[0] || Math.random() < 0.6)){
+      loot.push({ type: 'ammo', x: victim.x, y: victim.y, weapon: victim.weapon,
+                  ammo: Math.max(6, victim.ammo), mats: 100 });
     }
+    const killerCls = attacker === players[0] ? 'killer-you' : (attacker ? 'killer' : 'wp');
+    killFeed('<span class="' + killerCls + '">' + killer + '</span> ' +
+      '<span class="wp">[' + (weaponName || 'storm') + ']</span> ' +
+      '<span class="victim">' + victim.name.toUpperCase() + '</span>');
     checkGameOver();
   }
 
@@ -616,7 +711,16 @@
     ent.lastShot = now;
 
     if (w.mag) ent.ammo--;
-    cam.shake = Math.min(cam.shake + w.kick, 9);
+
+    // gunfire is audible; distant bot fights fade out with range
+    let shotGain = 1;
+    if (ent !== players[0]){
+      const d = dist(ent.x, ent.y, players[0].x, players[0].y);
+      shotGain = d > 1500 ? 0 : clamp(0.75 - d / 2000, 0, 0.75);
+    }
+    if (shotGain > 0) sfx(ent.weapon === 'shotgun' ? 'shootShotgun' : 'shootRifle', shotGain);
+
+    if (ent === players[0]) cam.shake = Math.min(cam.shake + w.kick * 0.45, 2.2);
 
     const pelletCount = w.pellets || 1;
     let anyHit = false;
@@ -641,6 +745,8 @@
 
     if (ent === players[0]){
       if (anyHit){
+        els.hitMarker.style.left = mouse.x + 'px';
+        els.hitMarker.style.top = mouse.y + 'px';
         els.hitMarker.classList.add('active');
         setTimeout(() => els.hitMarker.classList.remove('active'), 120);
       }
@@ -656,7 +762,7 @@
     const mx = ent.x + Math.cos(ent.angle) * (P_RADIUS + w.range/2);
     const my = ent.y + Math.sin(ent.angle) * (P_RADIUS + w.range/2);
     addParticle(mx, my, '#94a3b8', 5, 100);
-    sfx('pickaxe');
+    sfx('pickaxe', ent === players[0] ? 1 : (dist(ent.x, ent.y, players[0].x, players[0].y) > 700 ? 0.25 : 0.6));
     let hitAny = false;
     for (let e of [...players, ...bots]){
       if (e === ent || e.dead) continue;
@@ -664,44 +770,117 @@
     }
     for (let b of builds){ if (dist(b.x, b.y, mx, my) < 70){ damageBuild(b, w.dmg); hitAny = true; } }
     if (ent === players[0] && hitAny){
+      els.hitMarker.style.left = mouse.x + 'px';
+      els.hitMarker.style.top = mouse.y + 'px';
       els.hitMarker.classList.add('active');
       setTimeout(() => els.hitMarker.classList.remove('active'), 120);
     }
-    cam.shake = Math.min(cam.shake + 1.5, 9);
+    if (ent === players[0]) cam.shake = Math.min(cam.shake + 0.45, 2.2);
     if (ent === players[0]) updateHUD();
   }
 
   // ---------- AI ----------
+  // Bots pick whoever is closest (with a mild preference for the human), so
+  // they fight each other just as readily as they fight the player.
+  function pickBotTarget(b){
+    let best = null, bestScore = Infinity;
+    for (const e of [players[0], ...bots]){
+      if (!e || e === b || e.dead) continue;
+      const d = dist(b.x, b.y, e.x, e.y);
+      const score = d * (e === players[0] ? 0.85 : 1);
+      if (score < bestScore){ bestScore = score; best = e; }
+    }
+    return best;
+  }
+
   function updateBot(b, dt){
     if (b.dead) return;
     const now = Date.now();
-    let target = players[0];
-    if (!target || target.dead){
-      target = null; let bd = 1e9;
-      for (let o of bots){ if (o !== b && !o.dead){ const d = dist(b.x, b.y, o.x, o.y); if (d < bd){ bd = d; target = o; } } }
-    }
-    b.ai.target = target;
 
-    if (target){
+    // stick with a target for a couple of seconds, then reconsider who is the
+    // biggest threat; a dead target forces an immediate switch
+    let target = b.ai.target;
+    if (!target || target.dead || now > (b.ai.retargetAt || 0)){
+      const next = pickBotTarget(b);
+      if (next !== target) b.ai.seenSince = 0; // re-acquire before firing
+      target = next;
+      b.ai.target = target;
+      b.ai.retargetAt = now + rand(1400, 2600);
+    }
+
+    // the storm scares bots more than the player does
+    const stormDist = dist(b.x, b.y, storm.cx, storm.cy);
+    const fleeing = stormDist > storm.radius - 90;
+    let mx = 0, my = 0;
+
+    if (fleeing){
+      const a = Math.atan2(storm.cy - b.y, storm.cx - b.x);
+      b.angle = a;
+      mx = Math.cos(a); my = Math.sin(a);
+    } else if (target){
       const d = dist(b.x, b.y, target.x, target.y);
-      b.angle = Math.atan2(target.y - b.y, target.x - b.x);
-      const w = WEAPONS[b.weapon];
-      if (d > 300){
-        const spd = P_SPEED * 0.8;
-        b.x += Math.cos(b.angle) * spd * dt;
-        b.y += Math.sin(b.angle) * spd * dt;
+      const aim = Math.atan2(target.y - b.y, target.x - b.x);
+      b.angle = aim;
+
+      // imperfect aim, refreshed a few times a second
+      if (now > (b.ai.nextAim || 0)){
+        b.ai.nextAim = now + rand(200, 480);
+        b.ai.aimErr = rand(-0.15, 0.15);
       }
-      const canShoot = now - b.ai.lastShot > w.rate;
+      if (now > (b.ai.nextStrafe || 0)){
+        b.ai.nextStrafe = now + rand(700, 1700);
+        b.ai.strafe = Math.random() < 0.5 ? -1 : 1;
+      }
+
+      const preferred = b.weapon === 'shotgun' ? 190 : 380;
+      if (d > preferred){ mx = Math.cos(aim); my = Math.sin(aim); }
+      else if (d < preferred * 0.55){ mx = -Math.cos(aim); my = -Math.sin(aim); }
+      // keep moving sideways so they are not sitting ducks
+      mx += Math.cos(aim + Math.PI / 2) * 0.8 * b.ai.strafe;
+      my += Math.sin(aim + Math.PI / 2) * 0.8 * b.ai.strafe;
+
+      const w = WEAPONS[b.weapon];
       if (w.mag && b.ammo <= 0){ b.ammo = w.mag; b.reserve = w.reserveMax; }
-      if (d < w.range && canShoot){ shootBot(b); b.ai.lastShot = now; }
-      else if (d < 110 && canShoot){ meleeBot(b); b.ai.lastShot = now; }
+      // give the player a moment to react: bots need to hold the target in
+      // range for a beat before they open fire
+      const hasShot = d < w.range * 0.8;
+      if (hasShot){
+        if (!b.ai.seenSince) b.ai.seenSince = now;
+      } else {
+        b.ai.seenSince = 0;
+      }
+      const reacted = b.ai.seenSince && now - b.ai.seenSince > 380;
+      const canShoot = reacted && now - b.ai.lastShot > w.rate * 2.2;
+      if (canShoot && d < 90){
+        // point blank: swing instead of standing there firing
+        b.angle = aim;
+        meleeBot(b);
+        b.ai.lastShot = now;
+      } else if (canShoot && hasShot){
+        const trueAngle = b.angle;
+        b.angle = aim + (b.ai.aimErr || 0);
+        shootBot(b);
+        b.angle = trueAngle;
+        b.ai.lastShot = now;
+      }
     } else {
       b.ai.timer += dt;
       if (b.ai.timer > 4){ b.ai.timer = 0; b.ai.wx = b.x + rand(-500, 500); b.ai.wy = b.y + rand(-500, 500); }
       const a = Math.atan2(b.ai.wy - b.y, b.ai.wx - b.x);
       b.angle = a;
-      b.x += Math.cos(a) * P_SPEED * 0.6 * dt;
-      b.y += Math.sin(a) * P_SPEED * 0.6 * dt;
+      mx = Math.cos(a); my = Math.sin(a);
+    }
+
+    const mlen = Math.hypot(mx, my);
+    if (mlen > 0.001){
+      const angle = Math.atan2(my, mx);
+      const spd = P_SPEED * (fleeing ? 0.95 : 0.62);
+      // try the desired direction first, then progressively wider detours
+      for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.4, -2.4]){
+        const nx = b.x + Math.cos(angle + off) * spd * dt;
+        const ny = b.y + Math.sin(angle + off) * spd * dt;
+        if (!collidesWithWorld(nx, ny, P_RADIUS)){ b.x = nx; b.y = ny; break; }
+      }
     }
     b.x = clamp(b.x, 40, MAP - 40); b.y = clamp(b.y, 40, MAP - 40);
   }
@@ -718,12 +897,21 @@
     if (now - storm.lastDmg > 1000){
       storm.lastDmg = now;
       const victims = [players[0], ...bots];
+      let played = false;
       for (let e of victims){
         if (!e.dead && dist(e.x, e.y, storm.cx, storm.cy) > storm.radius){
-          e.health -= storm.damage;
-          addFloat(e.x, e.y - 35, '-' + storm.damage.toFixed(1), '#ff5f5f');
+          let left = storm.damage;
+          if (e.shield > 0){
+            const absorbed = Math.min(e.shield, left);
+            e.shield -= absorbed; left -= absorbed;
+            addFloat(e.x, e.y - 35, '-' + absorbed.toFixed(1), '#4da6ff');
+          }
+          if (left > 0){
+            e.health -= left;
+            addFloat(e.x, e.y - 35, '-' + left.toFixed(1), '#ff5f5f');
+          }
           addParticle(e.x, e.y - 10, '#ff5f5f', 3, 60);
-          sfx('storm');
+          if (e === players[0] && !played){ sfx('storm'); played = true; }
           if (e.health <= 0) doKill(e, null, 'storm');
         }
       }
@@ -740,7 +928,7 @@
 
   function moveEntity(ent, dx, dy, dt, isPlayer){
     if (ent.dead) return;
-    const run = isKeyDown('ShiftLeft') || isKeyDown('ShiftRight');
+    const run = isPlayer && (isKeyDown('ShiftLeft') || isKeyDown('ShiftRight'));
     const spd = (run ? P_SPEED_SPRINT : P_SPEED) * (ent.isBot ? 0.8 : 1);
     let nx = ent.x + dx * spd * dt;
     let ny = ent.y + dy * spd * dt;
@@ -781,47 +969,85 @@
     for (let i = loot.length - 1; i >= 0; i--){
       const l = loot[i];
       if (dist(p.x, p.y, l.x, l.y) < 44){
-        const w = WEAPONS[l.weapon];
-        if (l.weapon !== 'pickaxe'){
-          p.loadout[l.weapon].ammo = clamp(p.loadout[l.weapon].ammo + l.ammo, 0, w.reserveMax);
-          p.loadout[l.weapon].reserve = clamp(p.loadout[l.weapon].reserve + l.mats, 0, w.reserveMax + 40);
-          if (p.weapon === 'pickaxe' || l.weapon !== p.weapon) setWeapon(p, l.weapon);
-          else { p.ammo = p.loadout[p.weapon].ammo; p.reserve = p.loadout[p.weapon].reserve; }
-          addFloat(p.x, p.y - 50, 'PICKED UP ' + w.name, '#34d399');
-        }
+        takeLoot(p, l);
         loot.splice(i, 1);
         updateHUD();
       }
     }
 
-    if (p.health <= 0) doKill(p, null, 'none');
+    if (p.health <= 0) doKill(p, null, 'storm');
+  }
+
+  function takeLoot(p, l){
+    if (l.type === 'shield'){
+      const before = p.shield;
+      p.shield = Math.min(100, p.shield + (l.shield || 50));
+      addFloat(p.x, p.y - 50, '+' + Math.round(p.shield - before) + ' SHIELD', '#4da6ff');
+      return;
+    }
+    if (l.type === 'health'){
+      const before = p.health;
+      p.health = Math.min(100, p.health + (l.heal || 35));
+      addFloat(p.x, p.y - 50, '+' + Math.round(p.health - before) + ' HEALTH', '#34d399');
+      return;
+    }
+    const w = WEAPONS[l.weapon];
+    if (w && l.weapon !== 'pickaxe'){
+      p.loadout[l.weapon].reserve = clamp(p.loadout[l.weapon].reserve + l.ammo, 0, w.reserveMax);
+      if (p.weapon === l.weapon) p.reserve = p.loadout[l.weapon].reserve;
+      addFloat(p.x, p.y - 50, '+' + l.ammo + ' ' + w.name + ' AMMO', '#34d399');
+    }
+    p.mats.wood = Math.min(p.mats.wood + (l.mats || 0), 999);
+    p.mats.brick = Math.min(p.mats.brick + Math.round((l.mats || 0) * 0.5), 999);
+    p.mats.metal = Math.min(p.mats.metal + Math.round((l.mats || 0) * 0.25), 999);
   }
 
   function updateCamera(dt){
     const p = players[0];
     if (!p || p.dead) return;
-    const backDist = 150;
-    const sideOff = 24;
-    const idealX = p.x - Math.cos(p.angle) * backDist + Math.sin(p.angle) * sideOff;
-    const idealY = p.y - Math.sin(p.angle) * backDist - Math.cos(p.angle) * sideOff;
-    cam.x += (idealX - cam.x) * Math.min(dt * 14, 1);
-    cam.y += (idealY - cam.y) * Math.min(dt * 14, 1);
-    if (cam.shake > 0){
-      cam.shake *= 0.78;
-      cam.shakeX = (Math.random() - 0.5) * cam.shake * 2.5;
-      cam.shakeY = (Math.random() - 0.5) * cam.shake * 2.5;
-      if (cam.shake < 0.2) cam.shake = 0;
-    } else { cam.shakeX = 0; cam.shakeY = 0; }
+    // Keep the player centred with a frame-rate independent smooth follow.
+    // (The old camera sat 150px behind the aim direction. Since the aim angle
+    // is derived from the mouse in world space and the camera position feeds
+    // that conversion, the two formed a feedback loop: the view swung around
+    // the player whenever the mouse moved, which read as constant shaking.)
+    const follow = 1 - Math.exp(-dt * 16);
+    cam.x += (p.x - cam.x) * follow;
+    cam.y += (p.y - cam.y) * follow;
+
+    // Recoil: a small "trauma" value that decays smoothly into a low-frequency
+    // wobble. The old code added random per-frame jitter, which looked like
+    // vibration rather than weapon kick.
+    cam.t += dt;
+    cam.shake = Math.max(0, cam.shake - dt * 9);
+    if (cam.shake > 0.01){
+      const amp = cam.shake * 1.8;
+      cam.shakeX = Math.sin(cam.t * 47) * amp;
+      cam.shakeY = Math.sin(cam.t * 61 + 1.7) * amp * 0.75;
+    } else {
+      cam.shake = 0; cam.shakeX = 0; cam.shakeY = 0;
+    }
   }
 
   // ---------- update ----------
   function update(dt){
     if (state !== 'PLAY') return;
     frame++;
-    const now = Date.now();
+    const p = players[0];
 
     updateLocalPlayer(dt);
     for (let b of bots) updateBot(b, dt);
+
+    // hit flash decay (otherwise damaged entities stay translucent forever)
+    if (p && p.hitFlash > 0) p.hitFlash--;
+    for (let b of bots) if (b.hitFlash > 0) b.hitFlash--;
+
+    // kill feed ageing
+    let feedChanged = false;
+    for (let i = killFeedItems.length - 1; i >= 0; i--){
+      killFeedItems[i].life -= dt;
+      if (killFeedItems[i].life <= 0){ killFeedItems.splice(i, 1); feedChanged = true; }
+    }
+    if (feedChanged) renderKillFeed();
 
     for (let i = tracers.length - 1; i >= 0; i--){
       tracers[i].life -= dt * 11;
@@ -847,8 +1073,10 @@
   }
 
   function checkGameOver(){
+    if (state !== 'PLAY') return;
     const p = players[0];
     const botsAlive = bots.filter(b => !b.dead).length;
+    els.playersLeft.textContent = 'ALIVE: ' + (p.dead ? botsAlive : 1 + botsAlive);
     if (p.dead){
       state = 'GAMEOVER';
       showGameOver(false, botsAlive);
@@ -859,24 +1087,33 @@
       showGameOver(true, 0);
       return;
     }
-    els.playersLeft.textContent = 'ALIVE: ' + (1 + botsAlive);
   }
 
   function showGameOver(win, botsAlive){
     const p = players[0];
+    // the title uses background-clip:text, so tint it via text-fill-color
+    const tint = c => {
+      els.goTitle.style.background = 'none';
+      els.goTitle.style.webkitTextFillColor = c;
+      els.goTitle.style.color = c;
+    };
+    const secs = Math.max(0, Math.round((Date.now() - storm.shrinkStart) / 1000));
+    const mm = Math.floor(secs / 60), ss = String(secs % 60).padStart(2, '0');
     if (win){
       els.goTitle.textContent = 'VICTORY ROYALE!';
-      els.goTitle.style.color = '#34d399';
+      tint('#34d399');
       els.goTag.textContent = '#1 VICTORY ROYALE';
       els.goSub.textContent = 'You eliminated every bot and survived the storm.';
-      els.goStats.textContent = 'Eliminations: ' + p.elims;
+      els.goStats.textContent = 'Eliminations: ' + p.elims + ' • Survived ' + mm + ':' + ss;
     } else {
       els.goTitle.textContent = 'DEFEAT';
-      els.goTitle.style.color = '#ff5f5f';
+      tint('#ff5f5f');
       els.goTag.textContent = 'ELIMINATED';
       els.goSub.textContent = 'The storm or the bots got you.';
-      els.goStats.textContent = 'Eliminations: ' + p.elims + ' • Bots remaining: ' + botsAlive;
+      els.goStats.textContent = 'Eliminations: ' + p.elims + ' • Bots remaining: ' + botsAlive + ' • Survived ' + mm + ':' + ss;
     }
+    mouse.down = false;
+    shootPressed = false;
     els.gameOver.classList.remove('hidden');
   }
 
@@ -884,57 +1121,87 @@
   // grass pattern created once
   let grassPattern;
   (function createGrassPattern(){
+    const SIZE = 384;
     const tile = document.createElement('canvas');
-    tile.width = 160; tile.height = 160;
+    tile.width = tile.height = SIZE;
     const tc = tile.getContext('2d');
-    tc.fillStyle = '#479447'; tc.fillRect(0, 0, 160, 160);
-    tc.fillStyle = '#3d7f3d';
-    for (let i = 0; i < 22; i++){
-      const seed = (i * 7919) % 1000;
-      const px = ((seed * 37) % 160);
-      const py = ((seed * 73) % 160);
-      tc.fillRect(px, py, 18 + (seed % 12), 18 + (seed % 10));
+    tc.fillStyle = '#3f8b46'; tc.fillRect(0, 0, SIZE, SIZE);
+
+    // deterministic pseudo-random so the field looks hand-made but stable
+    let seed = 1337;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+
+    // broad, very soft colour variation
+    for (let i = 0; i < 14; i++){
+      const x = rnd() * SIZE, y = rnd() * SIZE, r = 40 + rnd() * 80;
+      const g = tc.createRadialGradient(x, y, 0, x, y, r);
+      const light = rnd() > 0.5;
+      g.addColorStop(0, light ? 'rgba(118, 182, 110, 0.16)' : 'rgba(38, 96, 44, 0.18)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      tc.fillStyle = g;
+      tc.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    // grass blades
+    for (let i = 0; i < 700; i++){
+      const x = rnd() * SIZE, y = rnd() * SIZE;
+      const h = 2 + rnd() * 4;
+      const lean = (rnd() - 0.5) * 2;
+      tc.strokeStyle = rnd() < 0.5 ? 'rgba(30, 84, 38, 0.35)' : 'rgba(124, 194, 112, 0.30)';
+      tc.lineWidth = 1;
+      tc.beginPath(); tc.moveTo(x, y); tc.lineTo(x + lean, y - h); tc.stroke();
+    }
+    // a few tiny stones / dirt flecks
+    for (let i = 0; i < 40; i++){
+      const x = rnd() * SIZE, y = rnd() * SIZE;
+      tc.fillStyle = 'rgba(60, 78, 52, 0.25)';
+      tc.fillRect(x, y, 1 + rnd() * 2, 1 + rnd() * 2);
     }
     grassPattern = ctx.createPattern(tile, 'repeat');
   })();
 
   function drawMap(){
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // ground is drawn in world space so the texture scrolls with the camera
     ctx.fillStyle = grassPattern;
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
+    const gx = cam.x - W/2 - 240, gy = cam.y - H/2 - 240;
+    ctx.fillRect(gx, gy, W + 480, H + 480);
 
-    ctx.save();
-    ctx.translate(W/2 - cam.x + cam.shakeX, H/2 - cam.y + cam.shakeY);
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 2;
-    ctx.strokeRect(-MAP/2, -MAP/2, MAP, MAP);
+    // faint grid so building snaps to something visible
+    ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const gx0 = Math.max(0, Math.floor((cam.x - W/2) / TILE) * TILE);
+    const gy0 = Math.max(0, Math.floor((cam.y - H/2) / TILE) * TILE);
+    const gx1 = Math.min(MAP, cam.x + W/2 + TILE);
+    const gy1 = Math.min(MAP, cam.y + H/2 + TILE);
+    for (let x = gx0; x <= gx1; x += TILE){ ctx.moveTo(x, gy0); ctx.lineTo(x, gy1); }
+    for (let y = gy0; y <= gy1; y += TILE){ ctx.moveTo(gx0, y); ctx.lineTo(gx1, y); }
+    ctx.stroke();
+
+    // battlefield boundary
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 3;
+    ctx.strokeRect(0, 0, MAP, MAP);
 
     for (let t of trees){
-      const sx = t.x, sy = t.y;
-      if (sx < -120 || sx > W + 120 || sy < -120 || sy > H + 120) continue;
+      if (!inView(t.x, t.y, t.r + 60)) continue;
       ctx.fillStyle = '#5d8a3d';
-      ctx.beginPath(); ctx.arc(sx, sy, t.r, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#4a702f';
-      ctx.beginPath(); ctx.arc(sx, sy - 6, t.r * 0.85, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(t.x, t.y - 6, t.r * 0.85, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#6b5b4b';
-      ctx.fillRect(sx - 5, sy + t.r - 6, 10, 22);
+      ctx.fillRect(t.x - 5, t.y + t.r - 6, 10, 22);
     }
     for (let r of rocks){
-      const sx = r.x, sy = r.y;
-      if (sx < -100 || sx > W + 100 || sy < -100 || sy > H + 100) continue;
+      if (!inView(r.x, r.y, r.r + 60)) continue;
       ctx.fillStyle = '#8a94a6';
-      ctx.beginPath(); ctx.arc(sx, sy, r.r, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#6b7383';
-      ctx.beginPath(); ctx.arc(sx - r.r*0.35, sy - r.r*0.25, r.r * 0.6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r.x - r.r*0.35, r.y - r.r*0.25, r.r * 0.6, 0, Math.PI*2); ctx.fill();
     }
-    ctx.restore();
   }
 
   function drawOneBuild(b){
     const r = rectBuild(b);
     const sx = b.x, sy = b.y;
-    if (sx + r.w < -60 || sx > W + 60 || sy + r.h < -60 || sy > H + 60) return;
+    if (!inView(sx, sy, 240)) return;
     ctx.save();
     ctx.translate(sx, sy);
     const hpPct = b.hp / b.maxHp;
@@ -983,7 +1250,14 @@
     ctx.fillStyle = (ok && canAfford) ? '#34d399' : '#ff5f5f';
     if (p.buildPiece === 'wall'){ ctx.fillRect(-50, -150, 100, 300); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(-50, -150, 100, 40); }
     else if (p.buildPiece === 'floor'){ ctx.fillRect(-50, -50, 100, 100); }
-    else { ctx.beginPath(); ctx.moveTo(-50, 50); ctx.lineTo(50, 50); ctx.lineTo(-50, -50); ctx.fill(); }
+    else {
+      ctx.beginPath();
+      if (p.buildRot === 0){ ctx.moveTo(-50, 50); ctx.lineTo(50, 50); ctx.lineTo(-50, -50); }
+      else if (p.buildRot === 1){ ctx.moveTo(50, 50); ctx.lineTo(50, -50); ctx.lineTo(-50, -50); }
+      else if (p.buildRot === 2){ ctx.moveTo(50, -50); ctx.lineTo(-50, -50); ctx.lineTo(50, 50); }
+      else { ctx.moveTo(-50, -50); ctx.lineTo(-50, 50); ctx.lineTo(50, -50); }
+      ctx.fill();
+    }
     ctx.restore();
     ctx.save();
     ctx.strokeStyle = (ok && canAfford) ? 'rgba(52,211,153,0.45)' : 'rgba(255,95,95,0.45)';
@@ -995,7 +1269,7 @@
   function drawPlayer(ent){
     if (ent.dead) return;
     const sx = ent.x, sy = ent.y;
-    if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) return;
+    if (!inView(sx, sy, 80)) return;
     ctx.save();
     ctx.translate(sx, sy);
     ctx.globalAlpha = ent.hitFlash > 0 ? 0.55 : 1;
@@ -1016,20 +1290,24 @@
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(ent.name + (ent.isBot ? '  [BOT]' : ''), sx, sy - 48);
+    ctx.fillText(ent.name, sx, sy - 48);
   }
 
   function drawLoot(){
     for (let l of loot){
-      const sx = l.x, sy = l.y;
+      if (!inView(l.x, l.y, 40)) continue;
       const pulse = 1 + Math.sin(frame * 0.12) * 0.12;
+      const isShield = l.type === 'shield', isHealth = l.type === 'health';
       ctx.save();
-      ctx.translate(sx, sy);
+      ctx.translate(l.x, l.y);
       ctx.scale(pulse, pulse);
-      ctx.fillStyle = l.weapon === 'shotgun' ? '#fbbf24' : l.weapon === 'rifle' ? '#60a5fa' : '#94a3b8';
+      ctx.fillStyle = isShield ? '#4da6ff' : isHealth ? '#34d399'
+        : (l.weapon === 'shotgun' ? '#fbbf24' : '#60a5fa');
       ctx.fillRect(-12, -12, 24, 24);
-      ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(l.weapon === 'shotgun' ? 'SG' : (l.weapon === 'rifle' ? 'AR' : '?'), 0, 1);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2;
+      ctx.strokeRect(-12, -12, 24, 24);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(isShield ? 'SH' : isHealth ? 'HP' : (l.weapon === 'shotgun' ? 'SG' : 'AR'), 0, 1);
       ctx.restore();
     }
   }
@@ -1107,7 +1385,7 @@
     };
     for (let b of bots) if (!b.dead) drawDot(b.x, b.y, '#ff5f5f');
     const p = players[0];
-    if (!p.dead) drawDot(p.x, p.y, '#34d399');
+    if (p && !p.dead) drawDot(p.x, p.y, '#34d399');
     mctx.fillStyle = '#fff'; mctx.fillRect(79, 79, 2, 2);
   }
 
@@ -1119,7 +1397,6 @@
     els.hpBar.style.width = (hpPct * 100) + '%';
     els.hpVal.textContent = Math.ceil(p.health);
     els.hpShieldVal.textContent = p.shield > 0 ? (' +' + Math.ceil(p.shield)) : '—';
-    els.hpBar.style.background = p.shield > 0 ? 'linear-gradient(90deg, #4da6ff ' + (shPct*100) + '%, #ff4d4d ' + (shPct*100) + '%)' : 'linear-gradient(90deg, #ff4d4d, #ff8a8a)';
     els.shBar.style.width = (shPct * 100) + '%';
     els.shVal.textContent = Math.ceil(p.shield);
     els.matWood.textContent = p.mats.wood;
@@ -1127,13 +1404,28 @@
     els.matMetal.textContent = p.mats.metal;
     const w = WEAPONS[p.weapon];
     els.weapon.textContent = w.name;
-    els.ammo.innerHTML = w.mag ? (p.ammo + ' <span style="opacity:.65;font-size:16px">/ ' + p.reserve + '</span>') : '—';
+    const reloading = p.reloadUntil && Date.now() < p.reloadUntil;
+    if (!w.mag) els.ammo.innerHTML = '—';
+    else if (reloading) els.ammo.innerHTML = '<span style="font-size:14px;letter-spacing:1px;color:#fbbf24">RELOADING…</span>';
+    else els.ammo.innerHTML = p.ammo + ' <span style="opacity:.65;font-size:16px">/ ' + p.reserve + '</span>';
   }
   function drawHUD(){
+    const p = players[0];
     updateHUD();
+    if (!p) return;
     const elapsed = (Date.now() - storm.shrinkStart) / 1000;
     const rem = Math.max(0, storm.shrinkDuration - elapsed);
-    els.storm.textContent = 'STORM ' + Math.ceil(rem / 60) + ':' + String(Math.ceil(rem % 60)).padStart(2, '0');
+    const outside = !p.dead && dist(p.x, p.y, storm.cx, storm.cy) > storm.radius;
+    if (outside){
+      els.storm.textContent = 'IN THE STORM!';
+      els.storm.style.color = '#ff5f5f';
+    } else if (rem > 0){
+      els.storm.textContent = 'STORM ' + Math.floor(rem / 60) + ':' + String(Math.floor(rem % 60)).padStart(2, '0');
+      els.storm.style.color = '#fbbf24';
+    } else {
+      els.storm.textContent = 'FINAL CIRCLE';
+      els.storm.style.color = '#fbbf24';
+    }
   }
 
   function draw(){
@@ -1155,22 +1447,19 @@
     ctx.restore();
 
     drawMinimap();
-
-    // debug
-    if (state === 'PLAY' && p && !p.dead){
-      const kd = ['KeyW','KeyA','KeyS','KeyD'].filter(c => isKeyDown(c));
-      els.debug.style.display = 'block';
-      els.debug.textContent = 'keys:[' + kd.join(',') + '] pos:[' + Math.round(p.x) + ',' + Math.round(p.y) + ']';
-    } else {
-      els.debug.style.display = 'none';
-    }
+    drawHUD();
   }
 
   function loop(now){
-    const dt = Math.min((now - lastTime) / 1000, 0.1);
-    lastTime = now;
-    update(dt);
-    draw();
+    try{
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      update(dt);
+      draw();
+    }catch(e){
+      showError('Runtime error: ' + (e && e.message ? e.message : String(e)));
+      return;
+    }
     if (state === 'PLAY') requestAnimationFrame(loop);
   }
 
